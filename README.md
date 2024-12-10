@@ -5,3 +5,6 @@ Instructions:
 Copy "945_s12.e15" and "945_s13.f15" into the "gradius3j" folder.
 Run "patch.bat".
 Output will be in the "gradius3j-modded" folder.
+
+Changelog:
+12/10/2024: v1.0 - Initial release.

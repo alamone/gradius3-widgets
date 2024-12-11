@@ -10,4 +10,5 @@ Run "patch.bat".
 Output will be in the "gradius3j-modded" folder.
 
 Changelog:
+12/10/2024: v1.1 - Fix ROM/RAM Check bypass to work on PCB.
 12/10/2024: v1.0 - Initial release.

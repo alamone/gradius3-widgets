@@ -23,9 +23,10 @@ screen_position_loop2 = $14CEDB
  org  0
   incbin  "945.bin"
  
- ; skip ROM/RAM check
- org $000094
-  bra $001140 ; originally bra $2ba
+ ; always pass ROM/RAM check
+ ; 24A change 60FE (infinite loop) to NOP 4E71
+ org $24A
+  nop
  
  ; update display widgets injection [after stage clear]
  org $0017FE

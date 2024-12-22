@@ -10,7 +10,8 @@ Instructions:<br />
 - Output will be in the "gradius3j-modded" folder.<br />
 <p>
 Changelog:<br />
-12/21/2024: V1.2 - Patch is now compatible with OLD version and NEW version roms.<br />
+12/22/2024: v1.3 - Patch now correctly shows lives using BCD rather than HEX values.<br />
+12/21/2024: v1.2 - Patch is now compatible with OLD version and NEW version roms.<br />
 12/10/2024: v1.1 - Fix ROM/RAM Check bypass to work on PCB.<br />
 12/10/2024: v1.0 - Initial release.<br />
 </p>

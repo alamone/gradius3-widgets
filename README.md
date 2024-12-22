@@ -6,10 +6,11 @@ Sample Screenshot:<br />
 <br />
 Instructions:<br />
 - Copy "945_s12.e15" and "945_s13.f15" into the "gradius3j" folder.<br />
-- Run "patch.bat".<br />
+- Run "patch-old.bat" for OLD version, or run "patch-new.bat" for NEW version.<br />
 - Output will be in the "gradius3j-modded" folder.<br />
 <p>
 Changelog:<br />
+12/21/2024: V1.2 - Patch is now compatible with OLD version and NEW version roms.<br />
 12/10/2024: v1.1 - Fix ROM/RAM Check bypass to work on PCB.<br />
 12/10/2024: v1.0 - Initial release.<br />
 </p>

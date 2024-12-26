@@ -11,8 +11,7 @@ if not exist "gradius3j\945_s13.f15" goto errorout
 echo Generating Gradius III widget patch...
 echo.
 combine-roms.exe gradius3j\945_s13.f15 gradius3j\945_s12.e15 945.bin
-copy gradius3-new.asm+gradius3-common.asm gradius3.asm
-asm68k /p gradius3.asm, 945-patched.bin
+asm68k /e rom_version=1 /p gradius3.asm, 945-patched.bin
 split-roms.exe 945-patched.bin gradius3j-modded\945_s13.f15 gradius3j-modded\945_s12.e15
 echo.
 echo Complete.  Results in "gradius3j-modded" folder.

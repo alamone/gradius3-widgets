@@ -21,7 +21,6 @@ goto ending
 echo Error: missing rom files.
 echo.
 echo Please copy Gradius III OLD ver. ROMs "945_s12.e15" and "945_s13.f15" into the "gradius3j" folder.
-echo These files can be found in the "gradius3j" folder of "gradius3.zip".
 
 :ending
 echo.

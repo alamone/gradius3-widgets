@@ -4,7 +4,7 @@
 - Adds pause feature (1P Start).<br />
 <br />
 Sample Screenshot:<br />
-![Clipboard_12-10-2024_02](https://github.com/user-attachments/assets/63dc4518-6ae7-4436-b95c-f1bb700602bf)
+https://github.com/user-attachments/assets/63dc4518-6ae7-4436-b95c-f1bb700602bf
 <br />
 <p>
 Instructions (NEW version):<br />

@@ -33,6 +33,9 @@ interrupt_skip_flag = $43FF0
 interrupt_backup = $43FF1
 pause_flag = $4004E
 system_byte = $C8001 ; BF when service is pushed, B7 when service and 1P start is pushed, F7 when 1P start pressed
+input_buffer1 = $40041 ; 40 = service 08 = start
+input_buffer2 = $40043
+
 
 ; constants - OLD and NEW version
  if rom_version=0
@@ -121,11 +124,11 @@ original_stage_increment_routine = $696e
  org sound_play_routine
   jmp injection_sound_play
 
-; org start_button_buffer_routine
-;  jmp injection_start_button_buffer
+ org start_button_buffer_routine
+  jmp injection_start_button_buffer
 
-; org interrupt_injection
-;  jmp interrupt_helper
+ org interrupt_injection
+  jmp interrupt_helper
  
  ; modded code
  org free_space
@@ -138,10 +141,15 @@ injection_start_button_buffer: ; use D5, D6, D7, A0.  D7 = start button state
  cmpi.b  #$8, D7    ; check if set
  bne .bypass        ; if not set, return
  
- move.b  system_byte, D7
- cmpi.b  #$B7, D7    ; check if service + 1P start
+ move.b  input_buffer2, D7
+ andi.b  #$8, D7     ; mask to start bit
+ cmpi.b  #$00, D7    ; check if start previously not pushed
+ bne .bypass
+ 
+ move.b  input_buffer1, D7
+ cmpi.b  #$48, D7    ; check if service + 1P start
  beq .bypass        ; if set, return
- cmpi.b  #$BF, D7    ; check if service
+ cmpi.b  #$40, D7    ; check if service
  beq .bypass        ; if set, return
 
  ; check if game is active
@@ -157,6 +165,8 @@ injection_start_button_buffer: ; use D5, D6, D7, A0.  D7 = start button state
  jmp .bypass
 
 .pause_begin 
+
+ jsr $33b8
 
  ; silence BGM
  clr.b   D6          ; D6 = 0
@@ -197,11 +207,11 @@ injection_start_button_buffer: ; use D5, D6, D7, A0.  D7 = start button state
  move.b  #$01, pause_flag           ; set pause flag
 
   ; wait until START is depressed
-.wait_depress
- ;move.b  #$1, watchdog_timer    ; reset watchdog, works on MAME but doesn't work on PCB
- move.w  start_button_state, D7 ; D7 = button state.  nothing pressed 00FF, start pressed 00F7 
- cmpi.w  #$00FF, D7
- bne .wait_depress
+;.wait_depress
+; move.w  start_button_state, D7 ; D7 = button state.  nothing pressed 00FF, start pressed 00F7 
+; cmpi.w  #$00FF, D7
+; bne .wait_depress
+ 
  
  ; check if ABC is pressed to give full equipment
  
@@ -368,22 +378,35 @@ interrupt_helper:
 .testmode:
  jmp interrupt_return_1 ;test mode
 .skip:
- 
- move.b  system_byte, D7
- cmpi.b  #$F7, D7    ; check if 1P start
- beq .unpause        ; if set, unpause
 
+ move.b  input_buffer1, D7
+ andi.b  #$8, D7     ; mask to start bit
+ cmpi.b  #$8, D7     ; check if 1P start
+ bne .bail           ; if not set, bail
+
+ move.b  input_buffer2, D7
+ andi.b  #$8, D7     ; mask to start bit
+ cmpi.b  #$0, D7     ; check if previously not 1P start
+ bne .bail           ; if not set, bail
+
+ jmp .unpause
+  
+.bail
  
+ jsr $33b8
  jmp interrupt_return_3 ;skip
  
 .unpause:
 
+ jsr $33b8
+
+  ;move.b  #$1, watchdog_timer    ; reset watchdog, works on MAME but doesn't work on PCB
+
  ; wait until START is depressed
-.wait_depress2
- ;move.b  #$1, watchdog_timer    ; reset watchdog, works on MAME but doesn't work on PCB
- move.w  start_button_state, D7 ; D7 = button state.  nothing pressed 00FF, start pressed 00F7  
- cmpi.w  #$00FF, D7
- bne .wait_depress2
+;.wait_depress2
+; move.w  start_button_state, D7 ; D7 = button state.  nothing pressed 00FF, start pressed 00F7  
+; cmpi.w  #$00FF, D7
+; bne .wait_depress2
  
 ; erase PAUSE display
  lea     screen_position_pause, A0    ; set x, y pos to middle
@@ -421,6 +444,6 @@ interrupt_helper:
 
  move.b  #$00, interrupt_skip_flag  ; unset skip flag
  move.b  #$00, pause_flag           ; unset pause flag 
- move.b  #$00, $40041.l             ; reset button buffer
+ ;move.b  #$00, $40041.l             ; reset button buffer
 
  jmp interrupt_return_3 ;skip

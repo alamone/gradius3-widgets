@@ -20,6 +20,7 @@ Instructions (OLD version):<br />
 </p>
 <p>
 Changelog:<br />
+04/23/2025: v1.6 - Removed pause feature (caused crashing on PCB).<br />
 12/30/2024: v1.5 - Updated batch files to use the next MAME naming convention.<br />  
 12/26/2024: v1.4 - Added pause feature.<br />  
 12/22/2024: v1.3 - Patch now correctly shows lives using BCD rather than HEX values.<br />

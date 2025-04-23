@@ -2,9 +2,10 @@
 - Add display widgets (numeric lives counter, current loop/stage) to Gradius III Arcade (JP).<br />
 - Allows stage skip without modifying DIP switches (hold Service button and press 1P Start.  In MAME, hold 7 and press 1).<br />
 - Adds pause feature (1P Start).<br />
+<p>
 Sample Screenshot:<br />
 https://github.com/user-attachments/assets/63dc4518-6ae7-4436-b95c-f1bb700602bf<br />
-<p>
+<br />
 Instructions (NEW version):<br />
 - Copy "945_312.e15" and "945_313.f15" into the "gradius3j" folder.<br />
 - Run "patch-new.bat".<br />

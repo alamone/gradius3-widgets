@@ -1,5 +1,13 @@
 ; Gradius 3 Arcade JP ver mod - display numeric lives and current loop & stage at bottom right
 
+; 1038d9 - TEST MODE (01 = on, 00 = normal game)
+; ddca - enemy spawn?  - 1039c0 - from 69B8 + stage
+; 2a8c - game process? - 40048 - 01 - ingame, 00 - not in-game or attract
+; efda - mode routine  - 40029 - 00 - demo, 01 - weapon select, 02 - "START" pre-stage, 03 - vic viper scroll in, 05 - in-stage, 8 - gameover
+; 2b2a - sound process - 40020 - 32 bit sound queue 1, 40024 - 32 bit sound queue 2
+; 33b8 - input process - 4004B - 00 input enable 01 input disable
+; 326e - mode routine  - 40007 - mode: 01 - intro 02 title 03 highscore 04 weapon select and in-game
+
 ; rom_version:	equ 0	; OLD = 0, NEW = 1
 soundtestbgm: equ 0    ; set to 1 to change sound test to BGM only
 
@@ -21,22 +29,32 @@ in_game = $40005
 sound_latch = $e8000
 sound_irq = $f0000
 start_button_state = $c8000
+interrupt_skip_flag = $43FF0
+interrupt_backup = $43FF1
+pause_flag = $4004E
+system_byte = $C8001 ; BF when service is pushed, B7 when service and 1P start is pushed, F7 when 1P start pressed
 
 ; constants - OLD and NEW version
  if rom_version=0
+free_space = $3fca0 ; starting from 00 ... 3FFFF - 3fca0 = 35F
 ;free_space = $3fcd0 ; starting from FF
-;free_space = $3fca0 ; starting from 00
-free_space = $D424
+;free_space = $D424  ; cause issues? D424...D5CA = 1A6    D870...DA82 = 212   D424...DA82 = 65E
  else
+;free_space = $3fd6a ; starting from 00     3FFFF - 3fd6a = 295
 ;free_space = $3fd9a ; starting from FF
-;free_space = $3fd6a ; starting from 00
-free_space = $D4AA
+free_space = $D4AA  ; cause issues?
  endc
 
 ; patch address locations - common
 romram_check = $24a
 original_zanki_routine = $1a72
 zanki_routine_return = $1a9a
+interrupt_injection = $1CD6
+interrupt_return_1 = $1CDE ; test mode
+interrupt_return_2 = $1D06 ; normal
+;interrupt_return_3 = $1D40 ; skip
+interrupt_return_3 = $1D2A ; skip
+;interrupt_return_3 = $1D06 ; skip
 display_widgets_injection = $17FE
 zanki_display_injection = $1ACA
 sound_play_routine = $2B5C
@@ -103,9 +121,12 @@ original_stage_increment_routine = $696e
  org sound_play_routine
   jmp injection_sound_play
 
- org start_button_buffer_routine
-  jmp injection_start_button_buffer
+; org start_button_buffer_routine
+;  jmp injection_start_button_buffer
 
+; org interrupt_injection
+;  jmp interrupt_helper
+ 
  ; modded code
  org free_space
 
@@ -116,99 +137,73 @@ injection_start_button_buffer: ; use D5, D6, D7, A0.  D7 = start button state
  andi.w  #$0008, D7 ; mask D7 to start bit
  cmpi.b  #$8, D7    ; check if set
  bne .bypass        ; if not set, return
+ 
+ move.b  system_byte, D7
+ cmpi.b  #$B7, D7    ; check if service + 1P start
+ beq .bypass        ; if set, return
+ cmpi.b  #$BF, D7    ; check if service
+ beq .bypass        ; if set, return
 
  ; check if game is active
  move.b  in_game, D5 ; D5 = in_game state
  cmpi.b  #$2, D5     ; check if game is active (active = 2, inactive = 0)
  bne .bypass         ; if inactive (e.g. attract mode), return   
  
+ ; check if flag set
+ move.b  pause_flag, D7
+ cmpi.b  #$1, D7
+ bne .pause_begin
+
+ jmp .bypass
+
+.pause_begin 
+
  ; silence BGM
  clr.b   D6          ; D6 = 0
  move.b  D6, sound_latch
  move.b  D6, sound_irq
  
  ; display PAUSE
- lea     screen_position_pause, A1    ; set x, y pos to middle
+ lea     screen_position_pause, A0    ; set x, y pos to middle
 
  move.b  #$20, D7       ; D7 = 20 (P)
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+ addq.w  #2, A0         ; update address ptr
 
  move.b  #$11, D7       ; D7 = 11 (A)
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+ addq.w  #2, A0         ; update address ptr
 
  move.b  #$25, D7       ; D7 = 25 (U)
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+ addq.w  #2, A0         ; update address ptr
 
  move.b  #$23, D7       ; D7 = 23 (S)
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+ addq.w  #2, A0         ; update address ptr
 
  move.b  #$15, D7       ; D7 = 15 (E)
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- 
- ; wait until START is depressed
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+  
+  
+  ; interrupt 2 (vblank) goes to 1C66
+
+ move.b  #$01, interrupt_skip_flag  ; set skip flag
+ move.b  #$01, pause_flag           ; set pause flag
+
+  ; wait until START is depressed
 .wait_depress
- move.w  start_button_state, D7 ; D7 = button state.  nothing pressed 00FF, start pressed 00F7
- move.b  #$1, watchdog_timer
+ ;move.b  #$1, watchdog_timer    ; reset watchdog, works on MAME but doesn't work on PCB
+ move.w  start_button_state, D7 ; D7 = button state.  nothing pressed 00FF, start pressed 00F7 
  cmpi.w  #$00FF, D7
  bne .wait_depress
  
  ; check if ABC is pressed to give full equipment
- 
- ; wait until START is pressed
-.wait_press
- move.w  start_button_state, D7 ; D7 = button state.  nothing pressed 00FF, start pressed 00F7
- move.b  #$1, watchdog_timer
- cmpi.w  #$00F7, D7
- bne .wait_press
- 
- ; wait until START is depressed
-.wait_depress2
- move.w  start_button_state, D7 ; D7 = button state.  nothing pressed 00FF, start pressed 00F7
- move.b  #$1, watchdog_timer
- cmpi.w  #$00FF, D7
- bne .wait_depress2
-
- ; erase PAUSE display
- lea     screen_position_pause, A1    ; set x, y pos to middle
-
- move.b  #$10, D7       ; D7 = 10 ( )
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
-
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
-
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
-
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
-
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
- 
- ; resume BGM
- move.b  last_bgm_played, D7 ; D7 = last BGM played
- cmpi.w  #$80, D7       ; check if prelude
- bne .skip_prelude
- move.b  #$A0, D7       ; replace with mid-start prelude
-.skip_prelude
- move.b  D7, sound_latch
- move.b  D7, sound_irq 
  
 .bypass
  jmp start_button_buffer_routine_return
@@ -361,3 +356,71 @@ stage_display:
  move.b  D6, ($1,A1)    ; issue update command
 
  rts
+
+interrupt_helper:
+ tst.b   $1038D9.l
+ bne     .testmode
+ tst.b   interrupt_skip_flag
+ bne     .skip
+ 
+.normalmode:
+ jmp interrupt_return_2 ;normal
+.testmode:
+ jmp interrupt_return_1 ;test mode
+.skip:
+ 
+ move.b  system_byte, D7
+ cmpi.b  #$F7, D7    ; check if 1P start
+ beq .unpause        ; if set, unpause
+
+ 
+ jmp interrupt_return_3 ;skip
+ 
+.unpause:
+
+ ; wait until START is depressed
+.wait_depress2
+ ;move.b  #$1, watchdog_timer    ; reset watchdog, works on MAME but doesn't work on PCB
+ move.w  start_button_state, D7 ; D7 = button state.  nothing pressed 00FF, start pressed 00F7  
+ cmpi.w  #$00FF, D7
+ bne .wait_depress2
+ 
+; erase PAUSE display
+ lea     screen_position_pause, A0    ; set x, y pos to middle
+ 
+ clr.b   D6
+ move.b  #$5C, D7       ; D7 = 5C ( )
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+ addq.w  #2, A0         ; update address ptr
+
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+ addq.w  #2, A0         ; update address ptr
+
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+ addq.w  #2, A0         ; update address ptr
+
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+ addq.w  #2, A0         ; update address ptr
+
+ move.b  D7, ($4001,A0) ; write
+ move.b  D6, ($1,A0)    ; issue update command
+ addq.w  #2, A0         ; update address ptr
+
+; resume BGM
+ move.b  last_bgm_played, D7 ; D7 = last BGM played
+ cmpi.w  #$80, D7       ; check if prelude
+ bne .skip_prelude
+ move.b  #$A0, D7       ; replace with mid-start prelude
+.skip_prelude
+ move.b  D7, sound_latch
+ move.b  D7, sound_irq 
+
+ move.b  #$00, interrupt_skip_flag  ; unset skip flag
+ move.b  #$00, pause_flag           ; unset pause flag 
+ move.b  #$00, $40041.l             ; reset button buffer
+
+ jmp interrupt_return_3 ;skip

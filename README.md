@@ -21,7 +21,7 @@ Instructions (OLD version):<br />
 </p>
 <p>
 Changelog:<br />
-06/01/2025: v1.8 - Remove "LOOP" text for better visibility.  Fix patch for NEW version.
+06/01/2025: v1.8 - Remove "LOOP" text for better visibility.  Fix patch for NEW version.<br />
 04/23/2025: v1.7 - Added back pause feature (fixed on PCB).<br />
 04/23/2025: v1.6 - Removed pause feature (caused crashing on PCB).<br />
 12/30/2024: v1.5 - Updated batch files to use the next MAME naming convention.<br />  

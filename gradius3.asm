@@ -79,12 +79,14 @@ stage_skip_dip_switch_check = $4266
 stage_skip_routine = $428A
 stage_skip_routine_return = $4292
 original_stage_increment_routine = $6958
+extra_spawn_addr = $DDD2
  else
 ; patch address locations - NEW version
 stage_skip_dip_switch_check = $427C
 stage_skip_routine = $42A0
 stage_skip_routine_return = $42A8
 original_stage_increment_routine = $696E
+extra_spawn_addr = $DE58
  endc
  
 ; for old, 945.bin should be the interleaved combination of 945_s13.f15 and 945_s12.e15
@@ -106,7 +108,7 @@ original_stage_increment_routine = $696E
  endc
 
  if extraspawn=1
- org $DDD2
+ org extra_spawn_addr
   nop
  endc
  
@@ -256,8 +258,8 @@ numeric_zanki_display:
  sbcd.b  D7, D0         ; current ship doesn't count. previously: subi.b  #1, D0
  move.b  D0, D7         ; copy zanki to D7
  
- ;andi.l  #$000000F0, D0 ; mask D0 to second digit
- andi.b  #$F0, D0 ; mask D0 to second digit
+ andi.l  #$000000F0, D0 ; mask D0 to second digit
+ ;andi.b  #$F0, D0 ; mask D0 to second digit
  lsr.b   #$4, D0        ; shift right 4 bits
  
  cmpi.b  #0, D0         ; check if tens is zero

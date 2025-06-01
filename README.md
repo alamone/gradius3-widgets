@@ -21,6 +21,7 @@ Instructions (OLD version):<br />
 </p>
 <p>
 Changelog:<br />
+06/01/2025: v1.81 - Bugfix.<br />  
 06/01/2025: v1.8 - Remove "LOOP" text for better visibility.  Fix patch for NEW version.<br />
 04/23/2025: v1.7 - Added back pause feature (fixed on PCB).<br />
 04/23/2025: v1.6 - Removed pause feature (caused crashing on PCB).<br />

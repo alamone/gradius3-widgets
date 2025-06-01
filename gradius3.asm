@@ -8,8 +8,20 @@
 ; 33b8 - input process - 4004B - 00 input enable 01 input disable
 ; 326e - mode routine  - 40007 - mode: 01 - intro 02 title 03 highscore 04 weapon select and in-game
 
+; OLD
+; 6804 CHARACTER ROM CHECK
+; 6838 SCREEN CHECK
+; 63C2 COLOR TEST
+; 659A IO TEST
+; 679E COIN COUNTER TEST
+; 6560 SOUND TEST
+; 6414 DIP SW SELECT
+
+
+
 ; rom_version:	equ 0	; OLD = 0, NEW = 1
 soundtestbgm: equ 0    ; set to 1 to change sound test to BGM only
+extraspawn: equ 0
 
 ; zanki_screen_offset_1p = $14C19F
 ; zanki_screen_offset_2p = $14C1CF
@@ -31,21 +43,20 @@ sound_irq = $f0000
 start_button_state = $c8000
 interrupt_skip_flag = $43FF0
 interrupt_backup = $43FF1
-pause_flag = $4004E
+pause_flag = $4004E ; 9E2 - read 40003.l, if 2 go to A4E which toggles pause flag?
 system_byte = $C8001 ; BF when service is pushed, B7 when service and 1P start is pushed, F7 when 1P start pressed
 input_buffer1 = $40041 ; 40 = service 08 = start
 input_buffer2 = $40043
 
-
-; constants - OLD and NEW version
+; constants - OLD and NEW version ... code is 0x310 bytes
  if rom_version=0
 free_space = $3fca0 ; starting from 00 ... 3FFFF - 3fca0 = 35F
 ;free_space = $3fcd0 ; starting from FF
 ;free_space = $D424  ; cause issues? D424...D5CA = 1A6    D870...DA82 = 212   D424...DA82 = 65E
  else
-;free_space = $3fd6a ; starting from 00     3FFFF - 3fd6a = 295
+free_space = $3fd6a ; starting from 00     3FFFF - 3fd6a = 295
 ;free_space = $3fd9a ; starting from FF
-free_space = $D4AA  ; cause issues?
+;free_space = $D4AA  ; cause issues?
  endc
 
 ; patch address locations - common
@@ -55,9 +66,7 @@ zanki_routine_return = $1a9a
 interrupt_injection = $1CD6
 interrupt_return_1 = $1CDE ; test mode
 interrupt_return_2 = $1D06 ; normal
-;interrupt_return_3 = $1D40 ; skip
 interrupt_return_3 = $1D2A ; skip
-;interrupt_return_3 = $1D06 ; skip
 display_widgets_injection = $17FE
 zanki_display_injection = $1ACA
 sound_play_routine = $2B5C
@@ -75,10 +84,11 @@ original_stage_increment_routine = $6958
 stage_skip_dip_switch_check = $427C
 stage_skip_routine = $42A0
 stage_skip_routine_return = $42A8
-original_stage_increment_routine = $696e
+original_stage_increment_routine = $696E
  endc
  
- ; 945.bin should be the interleaved combination of 945_s13.f15 and 945_s12.e15
+; for old, 945.bin should be the interleaved combination of 945_s13.f15 and 945_s12.e15
+; for new, 945.bin should be the interleaved combination of 945_313.f15 and 945_312.e15
  org  0
   incbin  "945.bin"
 
@@ -94,13 +104,18 @@ original_stage_increment_routine = $696e
   dc.b $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80
   dc.b $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80
  endc
+
+ if extraspawn=1
+ org $DDD2
+  nop
+ endc
  
- ; always pass ROM/RAM check
- ; 24A change 60FE (infinite loop) to NOP 4E71
+; always pass ROM/RAM check
+; 24A change 60FE (infinite loop) to NOP 4E71
  org romram_check
   nop
  
- ; update display widgets injection [after stage clear]
+; update display widgets injection [after stage clear]
  org display_widgets_injection
   jmp injection_display_widgets
 
@@ -108,19 +123,19 @@ original_stage_increment_routine = $696e
  org zanki_display_injection
   jmp numeric_zanki_display
 
- ; remove check for odd dip switch (AAAAA) to allow stage skip using 1P start + service
+; remove check for odd dip switch (AAAAA) to allow stage skip using 1P start + service
  org stage_skip_dip_switch_check
   nop
   
- ; stage skip injection
+; stage skip injection
  org stage_skip_routine
   jmp injection_stage_skip
 
- ; stage increment injection
+; stage increment injection
  org original_stage_increment_routine
   jmp injection_stage_increment
   
- ; sound playback injection
+; sound playback injection
  org sound_play_routine
   jmp injection_sound_play
 
@@ -130,36 +145,31 @@ original_stage_increment_routine = $696e
  org interrupt_injection
   jmp interrupt_helper
  
- ; modded code
+; modded code
  org free_space
+ dc.b $20, $11, $25, $23, $15, $0 ;pause
 
 injection_start_button_buffer: ; use D5, D6, D7, A0.  D7 = start button state
  move.w  D7, $40040.l ; overwritten instruction - write D7 to start button buffer
  
  ; check if START is pressed (0x08)
- andi.w  #$0008, D7 ; mask D7 to start bit
- cmpi.b  #$8, D7    ; check if set
+ andi.w  #$0048, D7 ; mask D7 to start bit and service bit
+ cmpi.b  #$08, D7   ; check if only start bit set
  bne .bypass        ; if not set, return
  
  move.b  input_buffer2, D7
  andi.b  #$8, D7     ; mask to start bit
  cmpi.b  #$00, D7    ; check if start previously not pushed
  bne .bypass
- 
- move.b  input_buffer1, D7
- cmpi.b  #$48, D7    ; check if service + 1P start
- beq .bypass        ; if set, return
- cmpi.b  #$40, D7    ; check if service
- beq .bypass        ; if set, return
 
  ; check if game is active
- move.b  in_game, D5 ; D5 = in_game state
- cmpi.b  #$2, D5     ; check if game is active (active = 2, inactive = 0)
- bne .bypass         ; if inactive (e.g. attract mode), return   
+; move.b  in_game, D5 ; D5 = in_game state
+ cmpi.b  #$2, in_game ; check if game is active (active = 2, inactive = 0)
+ bne .bypass          ; if inactive (e.g. attract mode), return   
  
  ; check if flag set
- move.b  pause_flag, D7
- cmpi.b  #$1, D7
+ ;move.b  pause_flag, D7
+ cmpi.b  #$1, pause_flag
  bne .pause_begin
 
  jmp .bypass
@@ -174,32 +184,17 @@ injection_start_button_buffer: ; use D5, D6, D7, A0.  D7 = start button state
  move.b  D6, sound_irq
  
  ; display PAUSE
- lea     screen_position_pause, A0    ; set x, y pos to middle
+ lea     screen_position_pause, A0    ; set x, y pos to middle 
+ lea     free_space, A1 ; pointer to "PAUSE"
+ move.b  #4, D6
 
- move.b  #$20, D7       ; D7 = 20 (P)
+.loop2:
+ move.b  (A1), D7       ; D7 = char
  move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
+ move.b  #0, ($1,A0)    ; palette
  addq.w  #2, A0         ; update address ptr
-
- move.b  #$11, D7       ; D7 = 11 (A)
- move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
- addq.w  #2, A0         ; update address ptr
-
- move.b  #$25, D7       ; D7 = 25 (U)
- move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
- addq.w  #2, A0         ; update address ptr
-
- move.b  #$23, D7       ; D7 = 23 (S)
- move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
- addq.w  #2, A0         ; update address ptr
-
- move.b  #$15, D7       ; D7 = 15 (E)
- move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
-  
+ addq.w  #1, A1         ; update text ptr
+ dbra    D6, .loop2
   
   ; interrupt 2 (vblank) goes to 1C66
 
@@ -246,22 +241,23 @@ numeric_zanki_display:
  ; A2 = end address (A1+0x14)
  ; D0 = zanki
  ; D1 = 1
- ; D6 = 0 (attribute byte?)
+ ; D6 = 0 (palette)
  ; D7 = 3F (ship icon)
  
  move.b  D7, ($4001,A1) ; write (D7 = 3F, ship icon)
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
  addq.w  #2, A1         ; update address ptr
  move.b  #$0E, D7       ; D7 = 0E (:)
  move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
  addq.w  #2, A1         ; update address ptr
  
  move.b  #$1, D7        ; D7 = 1
  sbcd.b  D7, D0         ; current ship doesn't count. previously: subi.b  #1, D0
  move.b  D0, D7         ; copy zanki to D7
  
- andi.l  #$000000F0, D0 ; mask D0 to second digit
+ ;andi.l  #$000000F0, D0 ; mask D0 to second digit
+ andi.b  #$F0, D0 ; mask D0 to second digit
  lsr.b   #$4, D0        ; shift right 4 bits
  
  cmpi.b  #0, D0         ; check if tens is zero
@@ -269,34 +265,36 @@ numeric_zanki_display:
 
 ; write second digit
  move.b  D0, ($4001,A1) ; write (D0 = tens digit)
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
  addq.w  #2, A1         ; update address ptr 
 
 ; write first digit
 .firstdigit: 
  andi.l  #$0000000F, D7 ; mask D7 to first digit
+ ;andi.b  #$0F, D7 ; mask D7 to first digit
  move.b  D7, ($4001,A1) ; write (D7 = ones digit)
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
  addq.w  #2, A1         ; update address ptr 
 
 ; write blank space
  move.b  #$10, D7       ; D7 = 10 ( ) - blank space for cleanup when digits go down
  move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
 
  rts 
 
 write_decimal:          ; write byte (D0) as one or two digit decimal to address A1, capped at 99.  D7 usable
  andi.l  #$000000FF, D0 ; mask D0 to single byte 
+ ;andi.b  #$FF, D0 ; mask D0 to single byte 
  cmpi.w  #100, D0       ; check if 3 digit number
  blt .less_than_100 
                         ; more than 2 digits, write 99
  move.b  #9, D7         ; D7 = 9 (9)
  move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
  addq.w  #2, A1         ; update address ptr
  move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
  addq.w  #2, A1         ; update address ptr
  rts
  
@@ -306,43 +304,43 @@ write_decimal:          ; write byte (D0) as one or two digit decimal to address
  beq .less_than_10
 
  move.b  D0, ($4001,A1) ; write second digit
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
  addq.w  #2, A1         ; update address ptr
 
 .less_than_10:
  swap    D0             ; swap quotient and remainder
  move.b  D0, ($4001,A1) ; write first digit
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
  addq.w  #2, A1         ; update address ptr
  
  rts 
 
 stage_display:
 
- lea     screen_position_loop1, A1    ; set x, y pos to bottom right
+; lea     screen_position_loop1, A1    ; set x, y pos to bottom right
 
- move.b  #$1C, D7       ; D7 = 1C (L)
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
+; move.b  #$1C, D7       ; D7 = 1C (L)
+; move.b  D7, ($4001,A1) ; write
+; move.b  D6, ($1,A1)    ; palette
+; addq.w  #2, A1         ; update address ptr
 
- move.b  #$1F, D7       ; D7 = 1F (O)
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
+; move.b  #$1F, D7       ; D7 = 1F (O)
+; move.b  D7, ($4001,A1) ; write
+; move.b  D6, ($1,A1)    ; palette
+; addq.w  #2, A1         ; update address ptr
 
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
+; move.b  D7, ($4001,A1) ; write
+; move.b  D6, ($1,A1)    ; palette
+; addq.w  #2, A1         ; update address ptr
 
- move.b  #$20, D7       ; D7 = 20 (P)
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
- addq.w  #2, A1         ; update address ptr
+; move.b  #$20, D7       ; D7 = 20 (P)
+; move.b  D7, ($4001,A1) ; write
+; move.b  D6, ($1,A1)    ; palette
+; addq.w  #2, A1         ; update address ptr
 
- move.b  #$0E, D7       ; D7 = 0E (:)
- move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
+; move.b  #$0E, D7       ; D7 = 0E (:)
+; move.b  D7, ($4001,A1) ; write
+; move.b  D6, ($1,A1)    ; palette
 
  lea     screen_position_loop2, A1    ; set x, y pos to bottom right
 
@@ -353,7 +351,7 @@ stage_display:
  
  move.b  #$2B, D7       ; D7 = 2B (-)
  move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
  addq.w  #2, A1         ; update address ptr
  
  move.b  stage_counter, D0 ; D0 = stage counter +1
@@ -363,7 +361,7 @@ stage_display:
 
  move.b  #$10, D7       ; D7 = 10 ( ) - blank space for cleanup when digits go down (e.g. stage 10 to stage 1)
  move.b  D7, ($4001,A1) ; write
- move.b  D6, ($1,A1)    ; issue update command
+ move.b  D6, ($1,A1)    ; palette
 
  rts
 
@@ -411,27 +409,15 @@ interrupt_helper:
 ; erase PAUSE display
  lea     screen_position_pause, A0    ; set x, y pos to middle
  
- clr.b   D6
+ clr.l   D6
  move.b  #$5C, D7       ; D7 = 5C ( )
+ 
+ move.b  #4, D6
+.loop1:
  move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
+ move.b  #0, ($1,A0)    ; palette
  addq.w  #2, A0         ; update address ptr
-
- move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
- addq.w  #2, A0         ; update address ptr
-
- move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
- addq.w  #2, A0         ; update address ptr
-
- move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
- addq.w  #2, A0         ; update address ptr
-
- move.b  D7, ($4001,A0) ; write
- move.b  D6, ($1,A0)    ; issue update command
- addq.w  #2, A0         ; update address ptr
+ dbra    D6, .loop1
 
 ; resume BGM
  move.b  last_bgm_played, D7 ; D7 = last BGM played

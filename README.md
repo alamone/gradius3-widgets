@@ -1,34 +1,32 @@
 # gradius3-widgets
-- Add display widgets (numeric lives counter, current loop/stage) to Gradius III Arcade (JP).<br />
-- Allows stage skip without modifying DIP switches (hold Service button and press 1P Start.  In MAME, hold 7 and press 1).<br />
-- Adds pause feature (1P Start).<br />
-<p>
-Sample Screenshot:<br />
-https://github.com/user-attachments/assets/63dc4518-6ae7-4436-b95c-f1bb700602bf<br />
-<br />
-Instructions (NEW version):<br />
-- Copy "945_312.e15" and "945_313.f15" into the "gradius3j" folder.<br />
-- Run "patch-new.bat".<br />
-- Output will be in the "gradius3j-modded" folder.<br />
-<br />
-</p>
-<p>
-Instructions (OLD version):<br />
-- Copy "945_s12.e15" and "945_s13.f15" into the "gradius3j" folder.<br />
-- Run "patch-old.bat".<br />
-- Output will be in the "gradius3j-modded" folder.<br />
-<br />
-</p>
-<p>
-Changelog:<br />
-06/01/2025: v1.81 - Bugfix.<br />  
-06/01/2025: v1.8 - Remove "LOOP" text for better visibility.  Fix patch for NEW version.<br />
-04/23/2025: v1.7 - Added back pause feature (fixed on PCB).<br />
-04/23/2025: v1.6 - Removed pause feature (caused crashing on PCB).<br />
-12/30/2024: v1.5 - Updated batch files to use the next MAME naming convention.<br />  
-12/26/2024: v1.4 - Added pause feature.<br />  
-12/22/2024: v1.3 - Patch now correctly shows lives using BCD rather than HEX values.<br />
-12/21/2024: v1.2 - Patch is now compatible with OLD version and NEW version roms.<br />
-12/10/2024: v1.1 - Fix ROM/RAM Check bypass to work on PCB.<br />
-12/10/2024: v1.0 - Initial release.<br />
-</p>
+
+**This repository is retired. The patcher has moved.**
+
+### → https://kiban.alamone.net/modtools/g3tool/
+
+Add display widgets (numeric lives counter, current loop/stage) to Gradius III
+Arcade (Japan), plus a pause feature, a skippable ending, and a fix for a
+lockup present in the original ROM.
+
+The patcher now runs **in your browser**. There is nothing to install, no
+assembler to download, and nothing is uploaded anywhere — your ROM files are
+read and written locally by the page itself. It detects which revision you have
+automatically.
+
+Everything you need is on that page: which MAME romset to deploy as, the
+expected `WRONG CHECKSUMS` warning, PCB and EPROM notes, the full changelog and
+the licence.
+
+---
+
+**What was here:** the last version published in this repository was **v1.81**
+(June 2025), patched with a Windows batch file and a user-supplied assembler.
+That route is no longer maintained. The current release is **v2.1** and is
+available only at the link above.
+
+ROM images are not distributed here and never were.
+
+Licensed under the Noncommercial + Attribution License (PolyForm
+Noncommercial 1.0.0 plus an attribution condition) — see `LICENSE`.
+
+This is a fan project and is not affiliated with Konami.

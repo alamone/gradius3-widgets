@@ -21,8 +21,8 @@ the licence.
 
 **What was here:** the last version published in this repository was **v1.81**
 (June 2025), patched with a Windows batch file and a user-supplied assembler.
-That route is no longer maintained. The current release is **v2.1** and is
-available only at the link above.
+That route is no longer maintained. The current release is available only at
+the link above.
 
 ROM images are not distributed here and never were.
 
